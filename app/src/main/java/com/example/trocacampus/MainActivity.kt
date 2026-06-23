@@ -28,12 +28,35 @@ fun AppNavigation() {
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
-            LoginScreen(onLoginSuccess = {
-                navController.navigate("home") {
-                    popUpTo("login") { inclusive = true }
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onNavigateToRegister = { // <--- Ação de ir para o cadastro
+                    navController.navigate("register")
                 }
-            })
+            )
         }
+
+        // NOVA ROTA: Tela de Cadastro
+        composable("register") {
+            RegisterScreen(
+                onRegisterSuccess = {
+                    // Se o cadastro der certo, já joga o usuário para a Home
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                        popUpTo("register") { inclusive = true }
+                    }
+                },
+                onBackToLogin = {
+                    // Botão de voltar para a tela de login
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable("home") {
             HomeScreen(navController = navController)
         }
