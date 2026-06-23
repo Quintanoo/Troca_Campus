@@ -4,13 +4,18 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,6 +28,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onNavigateToRegister: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    // Controlador para esconder o teclado
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(
         modifier = Modifier
@@ -47,7 +55,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onNavigateToRegister: () -> Unit) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(2.2f), // Aumentei um pouquinho o espaço branco
+                .weight(2.2f),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             color = Color.White
         ) {
@@ -67,27 +75,43 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onNavigateToRegister: () -> Unit) {
 
                 Text(text = "Email Institucional", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value = email, onValueChange = { email = it },
+                    value = email,
+                    onValueChange = { email = it },
                     placeholder = { Text("aluno@teste.com") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true, // Trava em uma linha
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next // Mostra botão de "Próximo"
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(text = "Senha", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value = password, onValueChange = { password = it },
+                    value = password,
+                    onValueChange = { password = it },
                     placeholder = { Text("123") },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true, // Trava em uma linha
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done // Mostra botão de "Confirmar" (check)
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { keyboardController?.hide() } // Esconde o teclado ao confirmar
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
                     onClick = {
+                        keyboardController?.hide() // Também esconde o teclado ao clicar no botão Entrar
                         if (email == "aluno@teste.com" && password == "123") {
                             onLoginSuccess()
                         } else {
@@ -103,7 +127,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onNavigateToRegister: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- NOVO BOTÃO DE CADASTRO AQUI ---
                 TextButton(
                     onClick = { onNavigateToRegister() },
                     modifier = Modifier.align(Alignment.CenterHorizontally)

@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -14,7 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,7 +29,8 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
     val PurpleBackground = Color(0xFF4C3EEB)
     val context = LocalContext.current
 
-    // Variáveis do formulário
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var curso by remember { mutableStateOf("") }
@@ -36,7 +42,6 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
             .fillMaxSize()
             .background(PurpleBackground)
     ) {
-        // --- TOPO (Botão de voltar e Título) ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -55,11 +60,10 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
             )
         }
 
-        // --- FORMULÁRIO ROLÁVEL (Card Branco) ---
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f), // Ocupa todo o resto da tela
+                .weight(1f),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             color = Color.White
         ) {
@@ -67,75 +71,103 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                 modifier = Modifier
                     .padding(horizontal = 32.dp, vertical = 24.dp)
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState()) // Permite rolar a tela com o teclado aberto
+                    .verticalScroll(rememberScrollState())
             ) {
-                // Nome
                 Text(text = "Nome Completo", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value = nome, onValueChange = { nome = it },
+                    value = nome,
+                    onValueChange = { nome = it },
                     placeholder = { Text("Ex: João Pedro Santos") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Email
                 Text(text = "Email Institucional", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value = email, onValueChange = { email = it },
+                    value = email,
+                    onValueChange = { email = it },
                     placeholder = { Text("aluno@universidade.edu.br") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Curso
                 Text(text = "Curso", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value = curso, onValueChange = { curso = it },
+                    value = curso,
+                    onValueChange = { curso = it },
                     placeholder = { Text("Ex: Engenharia da Computação") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Senha
                 Text(text = "Senha", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value = senha, onValueChange = { senha = it },
+                    value = senha,
+                    onValueChange = { senha = it },
                     placeholder = { Text("Mínimo de 6 caracteres") },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Next
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Confirmar Senha
                 Text(text = "Confirmar Senha", fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(
-                    value = confirmarSenha, onValueChange = { confirmarSenha = it },
+                    value = confirmarSenha,
+                    onValueChange = { confirmarSenha = it },
                     placeholder = { Text("Repita a senha") },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done // O último campo recebe o check
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { keyboardController?.hide() }
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Botão Cadastrar (Mock de validação)
                 Button(
                     onClick = {
+                        keyboardController?.hide()
                         if (nome.isBlank() || email.isBlank() || senha.isBlank()) {
                             Toast.makeText(context, "Preencha todos os campos!", Toast.LENGTH_SHORT).show()
                         } else if (senha != confirmarSenha) {
                             Toast.makeText(context, "As senhas não coincidem!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
-                            onRegisterSuccess() // Vai direto para a Home
+                            onRegisterSuccess()
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -147,7 +179,6 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Botão de já tenho conta (opcional, faz a mesma coisa que a seta no topo)
                 TextButton(
                     onClick = { onBackToLogin() },
                     modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -155,7 +186,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                     Text("Já tenho uma conta. Fazer Login", color = Color.Gray)
                 }
 
-                Spacer(modifier = Modifier.height(32.dp)) // Espaço extra para o final da rolagem
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
