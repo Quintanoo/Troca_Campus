@@ -35,6 +35,7 @@ productRoutes.post("/", authMiddleware, async (req, res) => {
     },
     include: {
       category: true,
+      photos: true,
       user: {
         select: {
           id: true,
@@ -78,6 +79,7 @@ productRoutes.get("/", async (req, res) => {
     },
     include: {
       category: true,
+      photo: true,
       user: {
         select: {
           id: true,
@@ -102,6 +104,7 @@ productRoutes.get("/my", authMiddleware, async (req, res) => {
     },
     include: {
       category: true,
+      photos: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -120,6 +123,7 @@ productRoutes.get("/:id", async (req, res) => {
     },
     include: {
       category: true,
+      photos: true,
       user: {
         select: {
           id: true,
@@ -176,6 +180,7 @@ productRoutes.put("/:id", authMiddleware, async (req, res) => {
     },
     include: {
       category: true,
+      photos: true,
     },
   });
 
@@ -206,6 +211,87 @@ productRoutes.delete("/:id", authMiddleware, async (req, res) => {
   await prisma.product.delete({
     where: {
       id,
+    },
+  });
+
+  return res.status(204).send();
+});
+
+productRoutes.post("/:id/photos", authMiddleware, async (req, res) => {
+  const productId = String(req.params.id);
+  const { url } = req.body;
+
+  if (!url) {
+    return res.status(400).json({
+      message: "URL da foto é obrigatória.",
+    });
+  }
+
+  const product = await prisma.product.findUnique({
+    where: {
+      id: productId,
+    },
+  });
+
+  if (!product) {
+    return res.status(404).json({
+      message: "Produto não encontrado.",
+    });
+  }
+
+  if (product.userId !== req.userId) {
+    return res.status(403).json({
+      message: "Você não tem permissão para adicionar fotos neste produto.",
+    });
+  }
+
+  const photo = await prisma.productPhoto.create({
+    data: {
+      productId,
+      url,
+    },
+  });
+
+  return res.status(201).json(photo);
+});
+
+productRoutes.delete("/:productId/photos/:photoId", authMiddleware, async (req, res) => {
+  const productId = String(req.params.productId);
+  const photoId = String(req.params.photoId);
+
+  const product = await prisma.product.findUnique({
+    where: {
+      id: productId,
+    },
+  });
+
+  if (!product) {
+    return res.status(404).json({
+      message: "Produto não encontrado.",
+    });
+  }
+
+  if (product.userId !== req.userId) {
+    return res.status(403).json({
+      message: "Você não tem permissão para remover fotos deste produto.",
+    });
+  }
+
+  const photo = await prisma.productPhoto.findUnique({
+    where: {
+      id: photoId,
+    },
+  });
+
+  if (!photo || photo.productId !== productId) {
+    return res.status(404).json({
+      message: "Foto não encontrada para este produto.",
+    });
+  }
+
+  await prisma.productPhoto.delete({
+    where: {
+      id: photoId,
     },
   });
 
