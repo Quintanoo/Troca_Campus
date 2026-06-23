@@ -25,6 +25,12 @@ enum ProductCondition {
   FAIR
 }
 
+enum TradeStatus {
+  PENDING
+  ACCEPTED
+  CANCELED
+}
+
 model User {
   id           String     @id @default(uuid())
   name         String
@@ -38,6 +44,7 @@ model User {
   updatedAt    DateTime   @updatedAt
 
   products     Product[]
+  sentTrades Trade[] @relation("RequesterTrades")
 
   @@map("users")
 }
@@ -66,6 +73,7 @@ model Product {
   user        User             @relation(fields: [userId], references: [id])
   category    Category         @relation(fields: [categoryId], references: [id])
   photos      ProductPhoto[]
+  trades Trade[]
 
   @@map("products")
 }
@@ -79,4 +87,18 @@ model ProductPhoto {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_photos")
+}
+
+model Trade {
+  id          String      @id @default(uuid())
+  requesterId String
+  productId   String
+  status      TradeStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  requester   User        @relation("RequesterTrades", fields: [requesterId], references: [id])
+  product     Product     @relation(fields: [productId], references: [id])
+
+  @@map("trades")
 }
