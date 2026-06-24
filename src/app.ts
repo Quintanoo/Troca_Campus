@@ -13,6 +13,14 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get("/health", (req, res) => {
+  return res.json({
+    status: "ok",
+    message: "API TrocaCampus funcionando corretamente.",
+    timestamp: new Date(),
+  });
+});
+
 app.use(routes);
 
 export { app };
