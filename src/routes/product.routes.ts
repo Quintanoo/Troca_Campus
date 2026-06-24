@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../config/prisma";
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { upload } from "../config/upload";
 
 const productRoutes = Router();
 
@@ -297,5 +298,49 @@ productRoutes.delete("/:productId/photos/:photoId", authMiddleware, async (req, 
 
   return res.status(204).send();
 });
+
+productRoutes.post(
+  "/:id/photos/upload",
+  authMiddleware,
+  upload.single("photo"),
+  async (req, res) => {
+    const productId = String(req.params.id);
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Imagem é obrigatória.",
+      });
+    }
+
+    const product = await prisma.product.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Produto não encontrado.",
+      });
+    }
+
+    if (product.userId !== req.userId) {
+      return res.status(403).json({
+        message: "Você não tem permissão para adicionar fotos neste produto.",
+      });
+    }
+
+    const photoUrl = `/uploads/products/${req.file.filename}`;
+
+    const photo = await prisma.productPhoto.create({
+      data: {
+        productId,
+        url: photoUrl,
+      },
+    });
+
+    return res.status(201).json(photo);
+  }
+);
 
 export { productRoutes };

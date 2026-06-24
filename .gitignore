@@ -19,3 +19,5 @@ pnpm-debug.log*
 # Arquivos do sistema/IDE
 .DS_Store
 .vscode/
+
+uploads/
