@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { routes } from "./routes";
 import path from "path";
+import { errorMiddleware } from "./middlewares/error.middleware";
 
 const app = express();
 
@@ -25,5 +26,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use(routes);
+
+app.use(errorMiddleware);
 
 export { app };
