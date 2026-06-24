@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/prisma";
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { validateInstitutionalEmail } from "../utils/validateInstitutionalEmail";
 
 const authRoutes = Router();
 
@@ -12,6 +13,14 @@ authRoutes.post("/register", async (req, res) => {
   if (!name || !email || !password) {
     return res.status(400).json({
       message: "Nome, e-mail e senha são obrigatórios.",
+    });
+  }
+
+  const isInstitutionalEmail = validateInstitutionalEmail(email);
+
+  if (!isInstitutionalEmail) {
+    return res.status(400).json({
+      message: "É necessário utilizar um e-mail institucional para realizar o cadastro.",
     });
   }
 
