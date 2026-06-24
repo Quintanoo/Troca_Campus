@@ -17,3 +17,10 @@ http://localhost:3333
 No emulador Android:
 
 http://10.0.2.2:3333
+
+## Seed de categorias
+
+Para cadastrar categorias iniciais no banco local, execute:
+
+```bash
+npx prisma db seed
