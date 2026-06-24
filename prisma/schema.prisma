@@ -45,6 +45,7 @@ model User {
 
   products     Product[]
   sentTrades Trade[] @relation("RequesterTrades")
+  messages Message[]
 
   @@map("users")
 }
@@ -99,6 +100,20 @@ model Trade {
 
   requester   User        @relation("RequesterTrades", fields: [requesterId], references: [id])
   product     Product     @relation(fields: [productId], references: [id])
+  messages Message[]
 
   @@map("trades")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  tradeId   String
+  senderId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  trade     Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id])
+
+  @@map("messages")
 }
