@@ -46,6 +46,8 @@ model User {
   products     Product[]
   sentTrades Trade[] @relation("RequesterTrades")
   messages Message[]
+  reviewsWritten  Review[] @relation("ReviewsWritten")
+  reviewsReceived Review[] @relation("ReviewsReceived")
 
   @@map("users")
 }
@@ -101,6 +103,7 @@ model Trade {
   requester   User        @relation("RequesterTrades", fields: [requesterId], references: [id])
   product     Product     @relation(fields: [productId], references: [id])
   messages Message[]
+  reviews Review[]
 
   @@map("trades")
 }
@@ -116,4 +119,20 @@ model Message {
   sender    User     @relation(fields: [senderId], references: [id])
 
   @@map("messages")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  tradeId   String
+  authorId  String
+  targetId  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  trade     Trade    @relation(fields: [tradeId], references: [id])
+  author    User     @relation("ReviewsWritten", fields: [authorId], references: [id])
+  target    User     @relation("ReviewsReceived", fields: [targetId], references: [id])
+
+  @@map("reviews")
 }
