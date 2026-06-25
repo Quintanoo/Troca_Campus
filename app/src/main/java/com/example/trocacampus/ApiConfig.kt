@@ -6,9 +6,9 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.Response
 
-// 1. Classes de Dados (O que enviamos e o que recebemos do Back-end)
 data class LoginRequest(val email: String, val password: String)
 
 data class RegisterRequest(
@@ -31,24 +31,43 @@ data class User(
 
 data class LoginResponse(val user: User, val token: String)
 
-// --- NOVAS CLASSES PARA PRODUTOS ---
+data class Category(val id: String, val name: String)
+
+data class ProductPhoto(val id: String, val url: String)
+
 data class ProductRequest(
     val title: String,
     val description: String,
     val categoryId: String,
-    val condition: String
+    val condition: String,
+    val interests: String? // <--- NOVO
 )
 
+data class TradeRequest(
+    val productId: String,
+    val offeredProductId: String // <--- NOVO
+)
+
+data class TradeResponse(
+    val id: String,
+    val requesterId: String,
+    val productId: String,
+    val status: String
+)
 data class ProductResponse(
     val id: String,
     val title: String,
     val description: String,
     val categoryId: String,
     val condition: String,
-    val userId: String
+    val status: String,
+    val userId: String,
+    val interests: String?, // <--- ESSENCIAL PARA O COMPILADOR NÃO RECLAMAR
+    val category: Category?,
+    val photos: List<ProductPhoto>?,
+    val user: User?
 )
 
-// 2. A Interface com as rotas
 interface AuthApi {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
@@ -59,15 +78,28 @@ interface AuthApi {
     @GET("auth/me")
     suspend fun getMe(@Header("Authorization") token: String): Response<User>
 
-    // NOVA ROTA PARA CRIAR ANÚNCIO:
     @POST("products")
     suspend fun createProduct(
         @Header("Authorization") token: String,
         @Body request: ProductRequest
     ): Response<ProductResponse>
+
+    @GET("products/my")
+    suspend fun getMyProducts(@Header("Authorization") token: String): Response<List<ProductResponse>>
+
+    @GET("products/{id}")
+    suspend fun getProductById(@Path("id") id: String): Response<ProductResponse>
+
+    @GET("products")
+    suspend fun getAllProducts(): Response<List<ProductResponse>>
+
+    @POST("trades")
+    suspend fun createTrade(
+        @Header("Authorization") token: String,
+        @Body request: TradeRequest
+    ): Response<TradeResponse>
 }
 
-// 3. O Cliente Retrofit
 object ApiClient {
     private const val BASE_URL = "http://10.0.2.2:3333/"
 

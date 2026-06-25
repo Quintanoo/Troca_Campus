@@ -234,6 +234,7 @@ fun AnunciarScreen(navController: NavController) {
                         return@Button
                     }
 
+                    // IDs do banco de dados (Mantidos do seu Prisma Studio)
                     val backendCategoryId = when (categoriaSelecionada) {
                         "Livros" -> "fb540823-987b-4f05-a8c5-360474b46671"
                         "Eletrônicos" -> "36821c83-22f1-4217-aab5-6a822c05e2c1"
@@ -243,7 +244,7 @@ fun AnunciarScreen(navController: NavController) {
 
                     val backendCondition = when (estadoSelecionado) {
                         "Novo" -> "NEW"
-                        "Seminovo" -> "SEMI_NEW"
+                        "Seminovo" -> "GOOD"
                         "Usado" -> "USED"
                         else -> "USED"
                     }
@@ -252,11 +253,13 @@ fun AnunciarScreen(navController: NavController) {
 
                     scope.launch {
                         try {
+                            // Cria a requisição enviando agora também os INTERESSES
                             val request = ProductRequest(
                                 title = titulo.trim(),
                                 description = descricao.trim(),
                                 categoryId = backendCategoryId,
-                                condition = backendCondition
+                                condition = backendCondition,
+                                interests = interesse.trim().takeIf { it.isNotBlank() } // Envia null se estiver vazio
                             )
 
                             // Chama a API!

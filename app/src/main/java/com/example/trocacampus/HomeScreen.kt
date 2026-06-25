@@ -1,6 +1,8 @@
 package com.example.trocacampus
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -13,29 +15,65 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
-data class Produto(
-    val titulo: String,
-    val categoria: String,
-    val estado: String,
-    val anunciante: String,
-    val curso: String,
-    val trocas: List<String>
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
+    val context = LocalContext.current
+
+    // Lista de Produtos Mockados convertidos para o formato correto da API
     val mockProdutos = listOf(
-        Produto("Cálculo Volume 1 - James Stewart", "Livros", "Bom", "Ana Silva", "Engenharia Civil", listOf("Física 1", "Álgebra")),
-        Produto("Kit Arduino Uno R3", "Componentes", "Novo", "Marcos Lima", "Engenharia Elétrica", listOf("Raspberry Pi", "Multímetro")),
-        Produto("Calculadora Científica Casio", "Eletrônicos", "Ótimo", "Carlos Mendes", "Matemática", listOf("Livros de TI", "Caderno")),
-        Produto("Jaleco Branco Tamanho M", "Materiais", "Usado", "Julia Santos", "Química", listOf("Óculos de Proteção"))
+        ProductResponse(
+            id = "mock-1",
+            title = "Cálculo Volume 1 - James Stewart",
+            description = "Livro em ótimo estado",
+            categoryId = "mock",
+            condition = "GOOD",
+            status = "ACTIVE",
+            userId = "mock-u1",
+            interests = "Física 1, Álgebra",
+            category = Category("mock", "Livros"),
+            photos = emptyList(),
+            user = User("mock-u1", "Ana Silva", "ana@teste.com", "Engenharia Civil", null, 5.0, "ACTIVE")
+        ),
+        ProductResponse(
+            id = "mock-2",
+            title = "Kit Arduino Uno R3",
+            description = "Quase sem uso",
+            categoryId = "mock2",
+            condition = "NEW",
+            status = "ACTIVE",
+            userId = "mock-u2",
+            interests = "Raspberry Pi, Multímetro",
+            category = Category("mock2", "Componentes"),
+            photos = emptyList(),
+            user = User("mock-u2", "Marcos Lima", "marcos@teste.com", "Engenharia Elétrica", null, 5.0, "ACTIVE")
+        )
     )
+
+    var products by remember { mutableStateOf<List<ProductResponse>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val response = ApiClient.authApi.getAllProducts()
+            products = if (response.isSuccessful) {
+                (response.body() ?: emptyList()) + mockProdutos
+            } else {
+                mockProdutos
+            }
+        } catch (e: Exception) {
+            products = mockProdutos
+        } finally {
+            isLoading = false
+        }
+    }
 
     Scaffold(
         bottomBar = { AppBottomNavigation(navController, currentRoute = "home") }
@@ -69,7 +107,8 @@ fun HomeScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -82,19 +121,24 @@ fun HomeScreen(navController: NavController) {
                     FilterChip(selected = true, onClick = {}, label = { Text("Todos") })
                     FilterChip(selected = false, onClick = {}, label = { Text("Livros") })
                     FilterChip(selected = false, onClick = {}, label = { Text("Eletrônicos") })
-                    FilterChip(selected = false, onClick = {}, label = { Text("Componentes") })
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(mockProdutos) { produto ->
-                    ProductCard(produto)
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF4C3EEB))
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(products) { produto ->
+                        ProductCard(produto, navController)
+                    }
                 }
             }
         }
@@ -102,9 +146,11 @@ fun HomeScreen(navController: NavController) {
 }
 
 @Composable
-fun ProductCard(produto: Produto) {
+fun ProductCard(produto: ProductResponse, navController: NavController) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { navController.navigate("product_details/${produto.id}") },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -114,13 +160,25 @@ fun ProductCard(produto: Produto) {
                 Box(
                     modifier = Modifier
                         .size(80.dp)
-                        .background(Color.LightGray, RoundedCornerShape(8.dp))
-                )
+                        .background(Color.LightGray, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Item", tint = Color.Gray)
+                }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(produto.titulo, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("Estado: ${produto.estado}", fontSize = 14.sp, color = Color.Gray)
+                    Text(produto.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+                    val conditionText = when(produto.condition) {
+                        "NEW" -> "Novo"
+                        "GOOD" -> "Seminovo"
+                        "USED" -> "Usado"
+                        else -> "Usado"
+                    }
+                    Text("Estado: $conditionText", fontSize = 14.sp, color = Color.Gray)
+
                     Spacer(modifier = Modifier.height(8.dp))
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -128,26 +186,21 @@ fun ProductCard(produto: Produto) {
                                 .background(Color(0xFFE0E0FF), RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(produto.anunciante.first().toString(), color = Color(0xFF4C3EEB), fontSize = 12.sp)
+                            val inicial = produto.user?.name?.firstOrNull()?.toString()?.uppercase() ?: "U"
+                            Text(inicial, color = Color(0xFF4C3EEB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text(produto.anunciante, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            Text(produto.curso, fontSize = 10.sp, color = Color.Gray)
+                            Text(produto.user?.name ?: "Usuário Desconhecido", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text(produto.user?.campus ?: "Campus não informado", fontSize = 10.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Troca por: ", fontSize = 12.sp, color = Color.Gray)
-                produto.trocas.forEach { item ->
-                    SuggestionChip(
-                        onClick = {},
-                        label = { Text(item, fontSize = 10.sp) },
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                }
+
+            if (produto.description.isNotBlank()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                Text("Descrição: ${produto.description}", fontSize = 12.sp, color = Color.DarkGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
