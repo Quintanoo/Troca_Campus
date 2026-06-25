@@ -1,46 +1,55 @@
 package com.example.trocacampus
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnunciarScreen(navController: NavController) {
+    val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
+
+    // Puxa o token do usuário logado
+    val sessionManager = remember { SessionManager(context) }
+
+    // Variáveis de Estado para o Formulário
     var titulo by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
-    var itensInteresse by remember { mutableStateOf("") }
+    var interesse by remember { mutableStateOf("") }
 
-    // --- NOVOS ESTADOS PARA OS DROPDOWNS E LISTA ---
-    // Estados para Categoria
-    val categorias = listOf("Livros", "Eletrônicos", "Componentes", "Materiais", "Outros")
-    var expandedCategoria by remember { mutableStateOf(false) }
-    var selectedCategoria by remember { mutableStateOf("") }
+    // Variáveis para os Dropdowns (Menus Suspensos)
+    var categoriaExpanded by remember { mutableStateOf(false) }
+    var categoriaSelecionada by remember { mutableStateOf("") }
+    val categorias = listOf("Livros", "Eletrônicos", "Materiais", "Outros")
 
-    // Estados para Estado de Conservação
-    val estadosConservacao = listOf("Novo", "Ótimo", "Bom", "Usado", "Com defeito")
-    var expandedEstado by remember { mutableStateOf(false) }
-    var selectedEstado by remember { mutableStateOf("") }
+    var estadoExpanded by remember { mutableStateOf(false) }
+    var estadoSelecionado by remember { mutableStateOf("") }
+    val estadosItem = listOf("Novo", "Seminovo", "Usado")
 
-    // Estado para a lista de interesses adicionados no botão "+"
-    var listaInteresses by remember { mutableStateOf(listOf<String>()) }
-    // ------------------------------------------------
+    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = { AppBottomNavigation(navController, currentRoute = "anunciar") }
@@ -55,6 +64,7 @@ fun AnunciarScreen(navController: NavController) {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Cabeçalho
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AddCircle, contentDescription = "Criar", tint = Color(0xFF4C3EEB))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -63,6 +73,7 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Caixa de Upload de Foto
             Text("Fotos do Item", fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
             Box(
@@ -70,57 +81,65 @@ fun AnunciarScreen(navController: NavController) {
                     .fillMaxWidth()
                     .height(120.dp)
                     .background(Color.White, RoundedCornerShape(12.dp))
-                    .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
+                    .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                    .clickable {
+                        Toast.makeText(context, "Abrir galeria em breve!", Toast.LENGTH_SHORT).show()
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Upload, contentDescription = "Upload", tint = Color.Gray)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Upload", tint = Color.Gray)
                     Text("Toque para adicionar fotos", color = Color.Gray, fontSize = 14.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Campo de Título
             Text("Título *", fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
                 value = titulo,
                 onValueChange = { titulo = it },
                 placeholder = { Text("Ex: Cálculo Volume 1 - James Stewart") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- DROPDOWNS FUNCIONANDO ---
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Dropdown de Categoria
+            // Linha com Categoria e Estado
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Dropdown Categoria
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Categoria *", fontWeight = FontWeight.SemiBold)
                     ExposedDropdownMenuBox(
-                        expanded = expandedCategoria,
-                        onExpandedChange = { expandedCategoria = !expandedCategoria }
+                        expanded = categoriaExpanded,
+                        onExpandedChange = { categoriaExpanded = !categoriaExpanded }
                     ) {
                         OutlinedTextField(
-                            value = selectedCategoria,
+                            value = categoriaSelecionada.ifEmpty { "Selecione" },
                             onValueChange = {},
                             readOnly = true,
-                            placeholder = { Text("Selecione") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoria) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpanded) },
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White)
                         )
                         ExposedDropdownMenu(
-                            expanded = expandedCategoria,
-                            onDismissRequest = { expandedCategoria = false }
+                            expanded = categoriaExpanded,
+                            onDismissRequest = { categoriaExpanded = false }
                         ) {
-                            categorias.forEach { opcao ->
+                            categorias.forEach { selectionOption ->
                                 DropdownMenuItem(
-                                    text = { Text(opcao) },
+                                    text = { Text(selectionOption) },
                                     onClick = {
-                                        selectedCategoria = opcao
-                                        expandedCategoria = false
+                                        categoriaSelecionada = selectionOption
+                                        categoriaExpanded = false
                                     }
                                 )
                             }
@@ -128,32 +147,32 @@ fun AnunciarScreen(navController: NavController) {
                     }
                 }
 
-                // Dropdown de Estado
+                // Dropdown Estado
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Estado *", fontWeight = FontWeight.SemiBold)
                     ExposedDropdownMenuBox(
-                        expanded = expandedEstado,
-                        onExpandedChange = { expandedEstado = !expandedEstado }
+                        expanded = estadoExpanded,
+                        onExpandedChange = { estadoExpanded = !estadoExpanded }
                     ) {
                         OutlinedTextField(
-                            value = selectedEstado,
+                            value = estadoSelecionado.ifEmpty { "Selecione" },
                             onValueChange = {},
                             readOnly = true,
-                            placeholder = { Text("Selecione") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedEstado) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = estadoExpanded) },
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White)
                         )
                         ExposedDropdownMenu(
-                            expanded = expandedEstado,
-                            onDismissRequest = { expandedEstado = false }
+                            expanded = estadoExpanded,
+                            onDismissRequest = { estadoExpanded = false }
                         ) {
-                            estadosConservacao.forEach { opcao ->
+                            estadosItem.forEach { selectionOption ->
                                 DropdownMenuItem(
-                                    text = { Text(opcao) },
+                                    text = { Text(selectionOption) },
                                     onClick = {
-                                        selectedEstado = opcao
-                                        expandedEstado = false
+                                        estadoSelecionado = selectionOption
+                                        estadoExpanded = false
                                     }
                                 )
                             }
@@ -164,65 +183,124 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Campo de Descrição
             Text("Descrição *", fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
                 value = descricao,
                 onValueChange = { descricao = it },
                 placeholder = { Text("Descreva as condições, anotações, marcas de uso...") },
-                modifier = Modifier.fillMaxWidth().height(120.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
                 shape = RoundedCornerShape(12.dp),
-                maxLines = 5
+                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- BOTÃO DE MAIS FUNCIONANDO ---
+            // Itens de Interesse
             Text("Itens de Interesse para Troca", fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
-                value = itensInteresse,
-                onValueChange = { itensInteresse = it },
+                value = interesse,
+                onValueChange = { interesse = it },
                 placeholder = { Text("Ex: Física 1, Calculadora") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White),
                 trailingIcon = {
-                    // Transformamos o Icon simples num IconButton clicável
-                    IconButton(onClick = {
-                        if (itensInteresse.isNotBlank()) {
-                            listaInteresses = listaInteresses + itensInteresse.trim()
-                            itensInteresse = "" // Limpa o campo de texto
-                        }
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = "Adicionar")
-                    }
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Interesse")
                 }
             )
 
-            // Exibe os chips dos itens adicionados logo abaixo
-            if (listaInteresses.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listaInteresses) { item ->
-                        AssistChip(
-                            onClick = {
-                                // Remove o item se o usuário clicar nele
-                                listaInteresses = listaInteresses - item
-                            },
-                            label = { Text(item) },
-                            trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remover", modifier = Modifier.size(16.dp)) }
-                        )
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Botão de Publicar
             Button(
-                onClick = { },
+                onClick = {
+                    keyboardController?.hide()
+
+                    // Validação local
+                    if (titulo.isBlank() || categoriaSelecionada.isBlank() || estadoSelecionado.isBlank() || descricao.isBlank()) {
+                        Toast.makeText(context, "Preencha todos os campos obrigatórios (*)", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    // Resgata o token do usuário
+                    val token = sessionManager.fetchAuthToken()
+                    if (token == null) {
+                        Toast.makeText(context, "Sessão expirada. Faça login novamente.", Toast.LENGTH_SHORT).show()
+                        navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                        return@Button
+                    }
+
+                    val backendCategoryId = when (categoriaSelecionada) {
+                        "Livros" -> "fb540823-987b-4f05-a8c5-360474b46671"
+                        "Eletrônicos" -> "36821c83-22f1-4217-aab5-6a822c05e2c1"
+                        "Materiais" -> "277ad896-fe3b-409a-9612-d7a99a03c6b3"
+                        else -> "2b5f14a4-4cfc-4a4f-836c-9b3538fe9f66" // Outros
+                    }
+
+                    val backendCondition = when (estadoSelecionado) {
+                        "Novo" -> "NEW"
+                        "Seminovo" -> "SEMI_NEW"
+                        "Usado" -> "USED"
+                        else -> "USED"
+                    }
+
+                    isLoading = true
+
+                    scope.launch {
+                        try {
+                            val request = ProductRequest(
+                                title = titulo.trim(),
+                                description = descricao.trim(),
+                                categoryId = backendCategoryId,
+                                condition = backendCondition
+                            )
+
+                            // Chama a API!
+                            val response = ApiClient.authApi.createProduct("Bearer $token", request)
+
+                            if (response.isSuccessful) {
+                                Toast.makeText(context, "Anúncio publicado com sucesso!", Toast.LENGTH_SHORT).show()
+
+                                // Limpa os campos
+                                titulo = ""
+                                descricao = ""
+                                interesse = ""
+                                categoriaSelecionada = ""
+                                estadoSelecionado = ""
+
+                                // Volta pra Home
+                                navController.navigate("home") {
+                                    popUpTo("home") { inclusive = true }
+                                }
+                            } else {
+                                val errorBody = response.errorBody()?.string() ?: ""
+                                if (errorBody.contains("Categoria")) {
+                                    Toast.makeText(context, "Erro: Categoria não existe no banco de dados.", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Erro ao publicar anúncio.", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Erro de conexão com o servidor.", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C3EEB)),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                enabled = !isLoading
             ) {
-                Text("Publicar Anúncio", fontSize = 16.sp)
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Publicar Anúncio", fontSize = 16.sp, color = Color.White)
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit, onNavigateToRegister: () -> Unit) {
@@ -28,9 +29,14 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onNavigateToRegister: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
 
     // Controlador para esconder o teclado
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Variáveis para a requisição da API
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -111,18 +117,60 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onNavigateToRegister: () -> Unit) {
 
                 Button(
                     onClick = {
-                        keyboardController?.hide() // Também esconde o teclado ao clicar no botão Entrar
-                        if (email == "aluno@teste.com" && password == "123") {
+                        keyboardController?.hide() // Esconde o teclado ao clicar no botão
+
+                        if (email.isBlank() || password.isBlank()) {
+                            Toast.makeText(context, "Preencha todos os campos.", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        // Tratamento do texto para evitar erros do teclado do Android
+                        val cleanEmail = email.trim().lowercase()
+
+                        // --- BACKUP / LOGIN MESTRE ---
+                        if (cleanEmail == "aluno@teste.com" && password == "123") {
+                            Toast.makeText(context, "Login Mestre ativado!", Toast.LENGTH_SHORT).show()
                             onLoginSuccess()
-                        } else {
-                            Toast.makeText(context, "Email ou senha incorretos.", Toast.LENGTH_SHORT).show()
+                            return@Button // Para a execução aqui e não chama a API
+                        }
+
+                        // --- FLUXO REAL DA API ---
+                        isLoading = true
+
+                        scope.launch {
+                            try {
+                                val request = LoginRequest(email = cleanEmail, password = password)
+                                val response = ApiClient.authApi.login(request)
+
+                                if (response.isSuccessful) {
+                                    val loginData = response.body()
+                                    loginData?.token?.let { sessionManager.saveAuthToken(it) }
+                                    Toast.makeText(context, "Bem-vindo, ${loginData?.user?.name}!", Toast.LENGTH_SHORT).show()
+                                    onLoginSuccess()
+                                } else {
+                                    Toast.makeText(context, "Email ou senha incorretos.", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Erro ao conectar com o servidor.", Toast.LENGTH_SHORT).show()
+                            } finally {
+                                isLoading = false
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PurpleBackground),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading // Desativa o botão enquanto carrega
                 ) {
-                    Text("Entrar ->", fontSize = 16.sp)
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Entrar ->", fontSize = 16.sp)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

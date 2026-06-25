@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -26,7 +28,22 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "login") {
+    // 1. Pega o contexto e inicializa o gerenciador de sessão
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+
+    // 2. Busca o token na memória do celular
+    val tokenSalvo = sessionManager.fetchAuthToken()
+
+    // 3. Decide dinamicamente qual será a primeira tela
+    val telaInicial = if (tokenSalvo != null) {
+        "home" // Se tem token, pula direto para a Home
+    } else {
+        "login" // Se não tem (ou fez logout), vai para o Login
+    }
+
+    // 4. Passa a tela escolhida para o startDestination
+    NavHost(navController = navController, startDestination = telaInicial) {
         composable("login") {
             LoginScreen(
                 onLoginSuccess = {
@@ -34,24 +51,21 @@ fun AppNavigation() {
                         popUpTo("login") { inclusive = true }
                     }
                 },
-                onNavigateToRegister = { // <--- Ação de ir para o cadastro
+                onNavigateToRegister = {
                     navController.navigate("register")
                 }
             )
         }
 
-        // NOVA ROTA: Tela de Cadastro
         composable("register") {
             RegisterScreen(
                 onRegisterSuccess = {
-                    // Se o cadastro der certo, já joga o usuário para a Home
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
                         popUpTo("register") { inclusive = true }
                     }
                 },
                 onBackToLogin = {
-                    // Botão de voltar para a tela de login
                     navController.popBackStack()
                 }
             )

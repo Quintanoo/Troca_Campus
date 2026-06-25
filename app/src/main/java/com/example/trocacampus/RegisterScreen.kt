@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
@@ -36,6 +37,10 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
     var curso by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
     var confirmarSenha by remember { mutableStateOf("") }
+
+    // Variáveis para a requisição da API
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -149,7 +154,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done // O último campo recebe o check
+                        imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = { keyboardController?.hide() }
@@ -161,20 +166,58 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                 Button(
                     onClick = {
                         keyboardController?.hide()
-                        if (nome.isBlank() || email.isBlank() || senha.isBlank()) {
+
+                        if (nome.isBlank() || email.isBlank() || senha.isBlank() || curso.isBlank()) {
                             Toast.makeText(context, "Preencha todos os campos!", Toast.LENGTH_SHORT).show()
-                        } else if (senha != confirmarSenha) {
+                            return@Button
+                        }
+                        if (senha != confirmarSenha) {
                             Toast.makeText(context, "As senhas não coincidem!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
-                            onRegisterSuccess()
+                            return@Button
+                        }
+
+                        isLoading = true
+
+                        scope.launch {
+                            try {
+                                // AQUI ESTÁ A CORREÇÃO: Limpando os dados antes de enviar
+                                val request = RegisterRequest(
+                                    name = nome.trim(),
+                                    email = email.trim().lowercase(),
+                                    password = senha,
+                                    campus = curso.trim(),
+                                    phone = ""
+                                )
+
+                                val response = ApiClient.authApi.register(request)
+
+                                if (response.isSuccessful) {
+                                    Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
+                                    onRegisterSuccess()
+                                } else {
+                                    Toast.makeText(context, "Erro ao criar conta. Verifique os dados ou o domínio do e-mail.", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Erro de conexão com o servidor.", Toast.LENGTH_SHORT).show()
+                            } finally {
+                                isLoading = false
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = purpleBackground),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading
                 ) {
-                    Text("Finalizar Cadastro", fontSize = 16.sp)
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Finalizar Cadastro", fontSize = 16.sp)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
