@@ -9,7 +9,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
-    val PurpleBackground = Color(0xFF4C3EEB)
+    val purpleBackground = Color(0xFF4C3EEB)
     val context = LocalContext.current
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -40,7 +40,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PurpleBackground)
+            .background(purpleBackground)
     ) {
         Row(
             modifier = Modifier
@@ -49,7 +49,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { onBackToLogin() }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -171,7 +171,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PurpleBackground),
+                    colors = ButtonDefaults.buttonColors(containerColor = purpleBackground),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Finalizar Cadastro", fontSize = 16.sp)
