@@ -6,7 +6,7 @@ import { upload } from "../config/upload";
 const productRoutes = Router();
 
 productRoutes.post("/", authMiddleware, async (req, res) => {
-  const { title, description, categoryId, condition } = req.body;
+  const { title, description, categoryId, condition, interests } = req.body;
 
   if (!title || !description || !categoryId || !condition) {
     return res.status(400).json({
@@ -32,6 +32,7 @@ productRoutes.post("/", authMiddleware, async (req, res) => {
       description,
       categoryId,
       condition,
+      interests, // Salva o interesse
       userId: req.userId as string,
     },
     include: {
@@ -80,7 +81,7 @@ productRoutes.get("/", async (req, res) => {
     },
     include: {
       category: true,
-      photo: true,
+      photos: true,
       user: {
         select: {
           id: true,
@@ -148,7 +149,7 @@ productRoutes.get("/:id", async (req, res) => {
 
 productRoutes.put("/:id", authMiddleware, async (req, res) => {
   const id = String(req.params.id);
-  const { title, description, categoryId, condition, status } = req.body;
+  const { title, description, categoryId, condition, status, interests } = req.body;
 
   const product = await prisma.product.findUnique({
     where: {
@@ -178,6 +179,7 @@ productRoutes.put("/:id", authMiddleware, async (req, res) => {
       categoryId,
       condition,
       status,
+      interests,
     },
     include: {
       category: true,
@@ -217,130 +219,5 @@ productRoutes.delete("/:id", authMiddleware, async (req, res) => {
 
   return res.status(204).send();
 });
-
-productRoutes.post("/:id/photos", authMiddleware, async (req, res) => {
-  const productId = String(req.params.id);
-  const { url } = req.body;
-
-  if (!url) {
-    return res.status(400).json({
-      message: "URL da foto é obrigatória.",
-    });
-  }
-
-  const product = await prisma.product.findUnique({
-    where: {
-      id: productId,
-    },
-  });
-
-  if (!product) {
-    return res.status(404).json({
-      message: "Produto não encontrado.",
-    });
-  }
-
-  if (product.userId !== req.userId) {
-    return res.status(403).json({
-      message: "Você não tem permissão para adicionar fotos neste produto.",
-    });
-  }
-
-  const photo = await prisma.productPhoto.create({
-    data: {
-      productId,
-      url,
-    },
-  });
-
-  return res.status(201).json(photo);
-});
-
-productRoutes.delete("/:productId/photos/:photoId", authMiddleware, async (req, res) => {
-  const productId = String(req.params.productId);
-  const photoId = String(req.params.photoId);
-
-  const product = await prisma.product.findUnique({
-    where: {
-      id: productId,
-    },
-  });
-
-  if (!product) {
-    return res.status(404).json({
-      message: "Produto não encontrado.",
-    });
-  }
-
-  if (product.userId !== req.userId) {
-    return res.status(403).json({
-      message: "Você não tem permissão para remover fotos deste produto.",
-    });
-  }
-
-  const photo = await prisma.productPhoto.findUnique({
-    where: {
-      id: photoId,
-    },
-  });
-
-  if (!photo || photo.productId !== productId) {
-    return res.status(404).json({
-      message: "Foto não encontrada para este produto.",
-    });
-  }
-
-  await prisma.productPhoto.delete({
-    where: {
-      id: photoId,
-    },
-  });
-
-  return res.status(204).send();
-});
-
-productRoutes.post(
-  "/:id/photos/upload",
-  authMiddleware,
-  upload.single("photo"),
-  async (req, res) => {
-    const productId = String(req.params.id);
-
-    if (!req.file) {
-      return res.status(400).json({
-        message: "Imagem é obrigatória.",
-      });
-    }
-
-    const product = await prisma.product.findUnique({
-      where: {
-        id: productId,
-      },
-    });
-
-    if (!product) {
-      return res.status(404).json({
-        message: "Produto não encontrado.",
-      });
-    }
-
-    if (product.userId !== req.userId) {
-      return res.status(403).json({
-        message: "Você não tem permissão para adicionar fotos neste produto.",
-      });
-    }
-
-    const photoUrl = `/uploads/products/${req.file.filename}`;
-
-    const photo = await prisma.productPhoto.create({
-      data: {
-        productId,
-        url: photoUrl,
-      },
-    });
-
-    return res.status(201).json(photo);
-  }
-);
 
 export { productRoutes };

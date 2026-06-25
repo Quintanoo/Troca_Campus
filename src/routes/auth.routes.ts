@@ -1,5 +1,5 @@
 import { Router } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs"; // <--- Mudamos de 'bcrypt' para 'bcryptjs'
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/prisma";
 import { authMiddleware } from "../middlewares/auth.middleware";
@@ -36,6 +36,7 @@ authRoutes.post("/register", async (req, res) => {
     });
   }
 
+  // O método hash funciona exatamente igual no bcryptjs
   const passwordHash = await bcrypt.hash(password, 10);
 
   const user = await prisma.user.create({
@@ -82,6 +83,7 @@ authRoutes.post("/login", async (req, res) => {
     });
   }
 
+  // O método compare também funciona idêntico
   const passwordMatches = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatches) {
