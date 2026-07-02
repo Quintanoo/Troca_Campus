@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ImageNotSupported
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage // Import alterado
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,17 +124,31 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
             } else if (product != null) {
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
-                    // --- AQUI ESTÁ A MUDANÇA DA IMAGEM DO BANNER ---
+                    // --- MUDANÇA DA IMAGEM DO BANNER COM TRATAMENTO DE ERRO ---
                     val imageUrl = product!!.photos?.firstOrNull()?.url?.replace("http://", "https://")
                     if (!imageUrl.isNullOrEmpty()) {
-                        AsyncImage(
+                        SubcomposeAsyncImage(
                             model = imageUrl,
                             contentDescription = "Imagem de ${product!!.title}",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(250.dp)
                                 .background(Color.LightGray),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            loading = {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Color(0xFF4C3EEB))
+                                }
+                            },
+                            error = {
+                                Box(modifier = Modifier.fillMaxSize().background(Color.LightGray), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.ImageNotSupported, contentDescription = "Erro", tint = Color.Gray, modifier = Modifier.size(48.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text("Imagem temporariamente indisponível", color = Color.Gray)
+                                    }
+                                }
+                            }
                         )
                     } else {
                         Box(

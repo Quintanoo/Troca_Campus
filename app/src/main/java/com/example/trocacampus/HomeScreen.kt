@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage // Import alterado
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -159,17 +159,27 @@ fun ProductCard(produto: ProductResponse, navController: NavController) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row {
-                // --- AQUI ESTÁ A MUDANÇA DA IMAGEM ---
+                // --- MUDANÇA DA IMAGEM COM TRATAMENTO DE ERRO ---
                 val imageUrl = produto.photos?.firstOrNull()?.url?.replace("http://", "https://")
 
                 if (!imageUrl.isNullOrEmpty()) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = imageUrl,
                         contentDescription = "Imagem do Item",
                         modifier = Modifier
                             .size(80.dp)
                             .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE0E0E0)), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF4C3EEB), strokeWidth = 2.dp)
+                            }
+                        },
+                        error = {
+                            Box(modifier = Modifier.fillMaxSize().background(Color.LightGray), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.ImageNotSupported, contentDescription = "Erro ao carregar", tint = Color.Gray)
+                            }
+                        }
                     )
                 } else {
                     Box(
