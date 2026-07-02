@@ -14,20 +14,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
     val context = LocalContext.current
 
-    // Lista de Produtos Mockados convertidos para o formato correto da API
     val mockProdutos = listOf(
         ProductResponse(
             id = "mock-1",
@@ -157,14 +159,30 @@ fun ProductCard(produto: ProductResponse, navController: NavController) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(Color.LightGray, RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Item", tint = Color.Gray)
+                // --- AQUI ESTÁ A MUDANÇA DA IMAGEM ---
+                val imageUrl = produto.photos?.firstOrNull()?.url?.replace("http://", "https://")
+
+                if (!imageUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = "Imagem do Item",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(Color.LightGray, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.ShoppingCart, contentDescription = "Item", tint = Color.Gray)
+                    }
                 }
+                // ------------------------------------
+
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(produto.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

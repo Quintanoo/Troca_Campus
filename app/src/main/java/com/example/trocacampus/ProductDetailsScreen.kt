@@ -15,11 +15,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,12 +31,10 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
     var product by remember { mutableStateOf<ProductResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Variáveis de controle de usuário e troca
     val sessionManager = remember { SessionManager(context) }
     val scope = rememberCoroutineScope()
     var currentUserId by remember { mutableStateOf<String?>(null) }
 
-    // Variáveis para o Modal de Escolha de Produto (Zezinho escolhendo o que oferecer)
     var showTradeDialog by remember { mutableStateOf(false) }
     var isTrading by remember { mutableStateOf(false) }
     var myProducts by remember { mutableStateOf<List<ProductResponse>>(emptyList()) }
@@ -46,18 +46,15 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
             userToken = sessionManager.fetchAuthToken()
 
             if (userToken != null) {
-                // Descobre quem sou eu
                 val meResponse = ApiClient.authApi.getMe("Bearer $userToken")
                 if (meResponse.isSuccessful) currentUserId = meResponse.body()?.id
 
-                // Já deixa a mochila de itens do usuário pronta para o pop-up de troca
                 val myProdsResponse = ApiClient.authApi.getMyProducts("Bearer $userToken")
                 if (myProdsResponse.isSuccessful) {
                     myProducts = myProdsResponse.body()?.filter { it.status == "ACTIVE" } ?: emptyList()
                 }
             }
 
-            // Busca os detalhes do produto atual
             val response = ApiClient.authApi.getProductById(productId)
             if (response.isSuccessful) {
                 product = response.body()
@@ -106,7 +103,7 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                                 if (userToken == null) {
                                     Toast.makeText(context, "Faça login novamente.", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    showTradeDialog = true // Abre o pop-up para o Zezinho escolher!
+                                    showTradeDialog = true
                                 }
                             },
                             modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp),
@@ -125,9 +122,31 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF4C3EEB))
             } else if (product != null) {
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.LightGray), contentAlignment = Alignment.Center) {
-                        Text("Sem Imagem", color = Color.Gray, fontSize = 18.sp)
+
+                    // --- AQUI ESTÁ A MUDANÇA DA IMAGEM DO BANNER ---
+                    val imageUrl = product!!.photos?.firstOrNull()?.url?.replace("http://", "https://")
+                    if (!imageUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = "Imagem de ${product!!.title}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .background(Color.LightGray),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .background(Color.LightGray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Sem Imagem", color = Color.Gray, fontSize = 18.sp)
+                        }
                     }
+                    // -----------------------------------------------
 
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(product!!.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -147,7 +166,6 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                             }
                         }
 
-                        // MOSTRA OS INTERESSES (SE O DONO TIVER PREENCHIDO)
                         if (!product!!.interests.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text("Interesse de Troca", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -181,7 +199,6 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
             }
         }
 
-        // --- MODAL DE ESCOLHA DE PRODUTO (O ZEZINHO OFERECENDO) ---
         if (showTradeDialog) {
             AlertDialog(
                 onDismissRequest = {
@@ -230,7 +247,7 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                                     try {
                                         val request = TradeRequest(
                                             productId = product!!.id,
-                                            offeredProductId = selectedOfferedProduct!!.id // Envia o item do Zezinho!
+                                            offeredProductId = selectedOfferedProduct!!.id
                                         )
                                         val response = ApiClient.authApi.createTrade("Bearer $userToken", request)
 
