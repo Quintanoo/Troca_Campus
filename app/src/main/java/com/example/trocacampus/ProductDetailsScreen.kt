@@ -1,5 +1,6 @@
 package com.example.trocacampus
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ImageNotSupported
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.SubcomposeAsyncImage // Import alterado
+import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,6 +82,25 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
                 },
+                actions = {
+                    if (product != null) {
+                        IconButton(onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "Olha esse anúncio no TrocaCampus: ${product!!.title}!\n\nBaixe o app para negociarmos!"
+                                )
+                                type = "text/plain"
+                            }
+                            // Opções de compartilhamento nativo do celular
+                            val shareIntent = Intent.createChooser(sendIntent, "Compartilhar anúncio")
+                            context.startActivity(shareIntent)
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Compartilhar", tint = Color(0xFF4C3EEB))
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
@@ -124,7 +145,6 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
             } else if (product != null) {
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
-                    // --- MUDANÇA DA IMAGEM DO BANNER COM TRATAMENTO DE ERRO ---
                     val imageUrl = product!!.photos?.firstOrNull()?.url?.replace("http://", "https://")
                     if (!imageUrl.isNullOrEmpty()) {
                         SubcomposeAsyncImage(
@@ -161,7 +181,6 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                             Text("Sem Imagem", color = Color.Gray, fontSize = 18.sp)
                         }
                     }
-                    // -----------------------------------------------
 
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(product!!.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
