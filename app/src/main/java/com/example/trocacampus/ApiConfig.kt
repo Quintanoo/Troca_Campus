@@ -40,12 +40,12 @@ data class ProductRequest(
     val description: String,
     val categoryId: String,
     val condition: String,
-    val interests: String? // <--- NOVO
+    val interests: String?
 )
 
 data class TradeRequest(
     val productId: String,
-    val offeredProductId: String // <--- NOVO
+    val offeredProductId: String
 )
 
 data class TradeResponse(
@@ -54,6 +54,7 @@ data class TradeResponse(
     val productId: String,
     val status: String
 )
+
 data class ProductResponse(
     val id: String,
     val title: String,
@@ -62,7 +63,7 @@ data class ProductResponse(
     val condition: String,
     val status: String,
     val userId: String,
-    val interests: String?, // <--- ESSENCIAL PARA O COMPILADOR NÃO RECLAMAR
+    val interests: String?,
     val category: Category?,
     val photos: List<ProductPhoto>?,
     val user: User?
@@ -101,7 +102,8 @@ interface AuthApi {
 }
 
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:3333/"
+    // URL atualizada para o servidor na nuvem (Render)
+    private const val BASE_URL = "https://troca-campus.onrender.com/"
 
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
