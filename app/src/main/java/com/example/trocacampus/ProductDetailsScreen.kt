@@ -1,5 +1,6 @@
 package com.example.trocacampus
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,16 +11,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ImageNotSupported
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,12 +34,10 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
     var product by remember { mutableStateOf<ProductResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Variáveis de controle de usuário e troca
     val sessionManager = remember { SessionManager(context) }
     val scope = rememberCoroutineScope()
     var currentUserId by remember { mutableStateOf<String?>(null) }
 
-    // Variáveis para o Modal de Escolha de Produto (Zezinho escolhendo o que oferecer)
     var showTradeDialog by remember { mutableStateOf(false) }
     var isTrading by remember { mutableStateOf(false) }
     var myProducts by remember { mutableStateOf<List<ProductResponse>>(emptyList()) }
@@ -46,18 +49,15 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
             userToken = sessionManager.fetchAuthToken()
 
             if (userToken != null) {
-                // Descobre quem sou eu
                 val meResponse = ApiClient.authApi.getMe("Bearer $userToken")
                 if (meResponse.isSuccessful) currentUserId = meResponse.body()?.id
 
-                // Já deixa a mochila de itens do usuário pronta para o pop-up de troca
                 val myProdsResponse = ApiClient.authApi.getMyProducts("Bearer $userToken")
                 if (myProdsResponse.isSuccessful) {
                     myProducts = myProdsResponse.body()?.filter { it.status == "ACTIVE" } ?: emptyList()
                 }
             }
 
-            // Busca os detalhes do produto atual
             val response = ApiClient.authApi.getProductById(productId)
             if (response.isSuccessful) {
                 product = response.body()
@@ -80,6 +80,25 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+                actions = {
+                    if (product != null) {
+                        IconButton(onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "Olha esse anúncio no TrocaCampus: ${product!!.title}!\n\nBaixe o app para negociarmos!"
+                                )
+                                type = "text/plain"
+                            }
+                            // Opções de compartilhamento nativo do celular
+                            val shareIntent = Intent.createChooser(sendIntent, "Compartilhar anúncio")
+                            context.startActivity(shareIntent)
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Compartilhar", tint = Color(0xFF4C3EEB))
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -106,7 +125,7 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                                 if (userToken == null) {
                                     Toast.makeText(context, "Faça login novamente.", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    showTradeDialog = true // Abre o pop-up para o Zezinho escolher!
+                                    showTradeDialog = true
                                 }
                             },
                             modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp),
@@ -125,8 +144,42 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF4C3EEB))
             } else if (product != null) {
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color.LightGray), contentAlignment = Alignment.Center) {
-                        Text("Sem Imagem", color = Color.Gray, fontSize = 18.sp)
+
+                    val imageUrl = product!!.photos?.firstOrNull()?.url?.replace("http://", "https://")
+                    if (!imageUrl.isNullOrEmpty()) {
+                        SubcomposeAsyncImage(
+                            model = imageUrl,
+                            contentDescription = "Imagem de ${product!!.title}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .background(Color.LightGray),
+                            contentScale = ContentScale.Crop,
+                            loading = {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Color(0xFF4C3EEB))
+                                }
+                            },
+                            error = {
+                                Box(modifier = Modifier.fillMaxSize().background(Color.LightGray), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.ImageNotSupported, contentDescription = "Erro", tint = Color.Gray, modifier = Modifier.size(48.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text("Imagem temporariamente indisponível", color = Color.Gray)
+                                    }
+                                }
+                            }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .background(Color.LightGray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Sem Imagem", color = Color.Gray, fontSize = 18.sp)
+                        }
                     }
 
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -147,7 +200,6 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                             }
                         }
 
-                        // MOSTRA OS INTERESSES (SE O DONO TIVER PREENCHIDO)
                         if (!product!!.interests.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text("Interesse de Troca", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -181,7 +233,6 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
             }
         }
 
-        // --- MODAL DE ESCOLHA DE PRODUTO (O ZEZINHO OFERECENDO) ---
         if (showTradeDialog) {
             AlertDialog(
                 onDismissRequest = {
@@ -230,7 +281,7 @@ fun ProductDetailsScreen(navController: NavController, productId: String) {
                                     try {
                                         val request = TradeRequest(
                                             productId = product!!.id,
-                                            offeredProductId = selectedOfferedProduct!!.id // Envia o item do Zezinho!
+                                            offeredProductId = selectedOfferedProduct!!.id
                                         )
                                         val response = ApiClient.authApi.createTrade("Bearer $userToken", request)
 

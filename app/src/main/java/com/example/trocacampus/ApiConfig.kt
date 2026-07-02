@@ -1,11 +1,15 @@
 package com.example.trocacampus
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.Response
 
@@ -40,12 +44,12 @@ data class ProductRequest(
     val description: String,
     val categoryId: String,
     val condition: String,
-    val interests: String? // <--- NOVO
+    val interests: String?
 )
 
 data class TradeRequest(
     val productId: String,
-    val offeredProductId: String // <--- NOVO
+    val offeredProductId: String
 )
 
 data class TradeResponse(
@@ -54,6 +58,7 @@ data class TradeResponse(
     val productId: String,
     val status: String
 )
+
 data class ProductResponse(
     val id: String,
     val title: String,
@@ -62,7 +67,7 @@ data class ProductResponse(
     val condition: String,
     val status: String,
     val userId: String,
-    val interests: String?, // <--- ESSENCIAL PARA O COMPILADOR NÃO RECLAMAR
+    val interests: String?,
     val category: Category?,
     val photos: List<ProductPhoto>?,
     val user: User?
@@ -78,10 +83,17 @@ interface AuthApi {
     @GET("auth/me")
     suspend fun getMe(@Header("Authorization") token: String): Response<User>
 
+    // --- ROTA ATUALIZADA PARA RECEBER A FOTO FÍSICA ---
+    @Multipart
     @POST("products")
     suspend fun createProduct(
         @Header("Authorization") token: String,
-        @Body request: ProductRequest
+        @Part("title") title: RequestBody,
+        @Part("description") description: RequestBody,
+        @Part("categoryId") categoryId: RequestBody,
+        @Part("condition") condition: RequestBody,
+        @Part("interests") interests: RequestBody?,
+        @Part photo: MultipartBody.Part?
     ): Response<ProductResponse>
 
     @GET("products/my")
@@ -101,7 +113,7 @@ interface AuthApi {
 }
 
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:3333/"
+    private const val BASE_URL = "https://troca-campus.onrender.com/"
 
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)

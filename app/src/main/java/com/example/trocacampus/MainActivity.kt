@@ -85,6 +85,10 @@ fun AppNavigation() {
         composable("trocas") {
             TrocasScreen(navController = navController)
         }
+        // --- NOVA ROTA DE NOTIFICAÇÕES AQUI ---
+        composable("notifications") {
+            NotificationsScreen(navController = navController)
+        }
         composable(
             route = "product_details/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
