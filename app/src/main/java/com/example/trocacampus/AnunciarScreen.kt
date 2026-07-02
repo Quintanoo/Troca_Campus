@@ -1,6 +1,10 @@
 package com.example.trocacampus
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,20 +13,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,24 +39,29 @@ fun AnunciarScreen(navController: NavController) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
 
-    // Puxa o token do usuário logado
     val sessionManager = remember { SessionManager(context) }
 
-    // Variáveis de Estado para o Formulário
     var titulo by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
     var interesse by remember { mutableStateOf("") }
-
-    // Variáveis para os Dropdowns (Menus Suspensos)
     var categoriaExpanded by remember { mutableStateOf(false) }
     var categoriaSelecionada by remember { mutableStateOf("") }
     val categorias = listOf("Livros", "Eletrônicos", "Materiais", "Outros")
-
     var estadoExpanded by remember { mutableStateOf(false) }
     var estadoSelecionado by remember { mutableStateOf("") }
     val estadosItem = listOf("Novo", "Seminovo", "Usado")
-
     var isLoading by remember { mutableStateOf(false) }
+    // Variável para guardar o caminho (Uri) da foto escolhida na galeria
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    // Lançador que abre a galeria nativa do Android
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                selectedImageUri = uri
+            }
+        }
+    )
 
     Scaffold(
         bottomBar = { AppBottomNavigation(navController, currentRoute = "anunciar") }
@@ -64,7 +76,6 @@ fun AnunciarScreen(navController: NavController) {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Cabeçalho
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AddCircle, contentDescription = "Criar", tint = Color(0xFF4C3EEB))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -73,29 +84,63 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Caixa de Upload de Foto
+            // Caixa de Upload de Foto com Galeria Real
             Text("Fotos do Item", fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(Color.White, RoundedCornerShape(12.dp))
-                    .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
-                    .clickable {
-                        Toast.makeText(context, "Abrir galeria em breve!", Toast.LENGTH_SHORT).show()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Upload", tint = Color.Gray)
-                    Text("Toque para adicionar fotos", color = Color.Gray, fontSize = 14.sp)
+
+            if (selectedImageUri == null) {
+                // Estado vazio: Botão para abrir galeria
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                        .clickable {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Upload", tint = Color.Gray)
+                        Text("Toque para adicionar foto", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
+            } else {
+                // Estado preenchido: Mostra a imagem com opção de trocar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                ) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = "Foto selecionada",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("Toque para trocar", color = Color.White, fontSize = 12.sp)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Título
             Text("Título *", fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
                 value = titulo,
@@ -109,12 +154,10 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Linha com Categoria e Estado
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Dropdown Categoria
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Categoria *", fontWeight = FontWeight.SemiBold)
                     ExposedDropdownMenuBox(
@@ -147,7 +190,6 @@ fun AnunciarScreen(navController: NavController) {
                     }
                 }
 
-                // Dropdown Estado
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Estado *", fontWeight = FontWeight.SemiBold)
                     ExposedDropdownMenuBox(
@@ -183,7 +225,6 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Descrição
             Text("Descrição *", fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
                 value = descricao,
@@ -198,7 +239,6 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Itens de Interesse
             Text("Itens de Interesse para Troca", fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
                 value = interesse,
@@ -215,18 +255,15 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botão de Publicar
             Button(
                 onClick = {
                     keyboardController?.hide()
 
-                    // Validação local
                     if (titulo.isBlank() || categoriaSelecionada.isBlank() || estadoSelecionado.isBlank() || descricao.isBlank()) {
                         Toast.makeText(context, "Preencha todos os campos obrigatórios (*)", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
-                    // Resgata o token do usuário
                     val token = sessionManager.fetchAuthToken()
                     if (token == null) {
                         Toast.makeText(context, "Sessão expirada. Faça login novamente.", Toast.LENGTH_SHORT).show()
@@ -234,12 +271,11 @@ fun AnunciarScreen(navController: NavController) {
                         return@Button
                     }
 
-                    // IDs do banco de dados (Mantidos do seu Prisma Studio)
                     val backendCategoryId = when (categoriaSelecionada) {
                         "Livros" -> "fb540823-987b-4f05-a8c5-360474b46671"
                         "Eletrônicos" -> "36821c83-22f1-4217-aab5-6a822c05e2c1"
                         "Materiais" -> "277ad896-fe3b-409a-9612-d7a99a03c6b3"
-                        else -> "2b5f14a4-4cfc-4a4f-836c-9b3538fe9f66" // Outros
+                        else -> "2b5f14a4-4cfc-4a4f-836c-9b3538fe9f66"
                     }
 
                     val backendCondition = when (estadoSelecionado) {
@@ -253,39 +289,31 @@ fun AnunciarScreen(navController: NavController) {
 
                     scope.launch {
                         try {
-                            // Cria a requisição enviando agora também os INTERESSES
                             val request = ProductRequest(
                                 title = titulo.trim(),
                                 description = descricao.trim(),
                                 categoryId = backendCategoryId,
                                 condition = backendCondition,
-                                interests = interesse.trim().takeIf { it.isNotBlank() } // Envia null se estiver vazio
+                                interests = interesse.trim().takeIf { it.isNotBlank() }
                             )
 
-                            // Chama a API!
                             val response = ApiClient.authApi.createProduct("Bearer $token", request)
 
                             if (response.isSuccessful) {
                                 Toast.makeText(context, "Anúncio publicado com sucesso!", Toast.LENGTH_SHORT).show()
 
-                                // Limpa os campos
                                 titulo = ""
                                 descricao = ""
                                 interesse = ""
                                 categoriaSelecionada = ""
                                 estadoSelecionado = ""
+                                selectedImageUri = null // Limpa a foto
 
-                                // Volta pra Home
                                 navController.navigate("home") {
                                     popUpTo("home") { inclusive = true }
                                 }
                             } else {
-                                val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Categoria")) {
-                                    Toast.makeText(context, "Erro: Categoria não existe no banco de dados.", Toast.LENGTH_LONG).show()
-                                } else {
-                                    Toast.makeText(context, "Erro ao publicar anúncio.", Toast.LENGTH_LONG).show()
-                                }
+                                Toast.makeText(context, "Erro ao publicar anúncio.", Toast.LENGTH_LONG).show()
                             }
                         } catch (e: Exception) {
                             Toast.makeText(context, "Erro de conexão com o servidor.", Toast.LENGTH_SHORT).show()

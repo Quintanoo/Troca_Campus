@@ -5,7 +5,8 @@ import { upload } from "../config/upload";
 
 const productRoutes = Router();
 
-productRoutes.post("/", authMiddleware, async (req, res) => {
+// Adicionamos o upload.single("photo") como middleware
+productRoutes.post("/", authMiddleware, upload.single("photo"), async (req, res) => {
   const { title, description, categoryId, condition, interests } = req.body;
 
   if (!title || !description || !categoryId || !condition) {
@@ -26,6 +27,7 @@ productRoutes.post("/", authMiddleware, async (req, res) => {
     });
   }
 
+  // 1. Cria o produto normalmente
   const product = await prisma.product.create({
     data: {
       title,
@@ -34,6 +36,25 @@ productRoutes.post("/", authMiddleware, async (req, res) => {
       condition,
       interests, // Salva o interesse
       userId: req.userId as string,
+    },
+  });
+
+  // 2. Se uma foto foi enviada na requisição, salva a URL dela associada ao produto
+  if (req.file) {
+    const photoUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+
+    await prisma.productPhoto.create({
+      data: {
+        url: photoUrl,
+        productId: product.id,
+      },
+    });
+  }
+
+  // 3. Busca o produto novamente para incluir as fotos e retornar ao aplicativo
+  const productWithRelations = await prisma.product.findUnique({
+    where: {
+      id: product.id,
     },
     include: {
       category: true,
@@ -49,7 +70,7 @@ productRoutes.post("/", authMiddleware, async (req, res) => {
     },
   });
 
-  return res.status(201).json(product);
+  return res.status(201).json(productWithRelations);
 });
 
 productRoutes.get("/", async (req, res) => {
