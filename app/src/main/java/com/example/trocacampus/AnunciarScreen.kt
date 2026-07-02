@@ -1,5 +1,6 @@
 package com.example.trocacampus
 
+import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,6 +32,28 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+import java.io.FileOutputStream
+
+// Função auxiliar para transformar a Uri da galeria num File real
+fun getFileFromUri(context: Context, uri: Uri): File? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val tempFile = File.createTempFile("upload_img", ".jpg", context.cacheDir)
+        val outputStream = FileOutputStream(tempFile)
+        inputStream.copyTo(outputStream)
+        inputStream.close()
+        outputStream.close()
+        tempFile
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,9 +74,9 @@ fun AnunciarScreen(navController: NavController) {
     var estadoSelecionado by remember { mutableStateOf("") }
     val estadosItem = listOf("Novo", "Seminovo", "Usado")
     var isLoading by remember { mutableStateOf(false) }
-    // Variável para guardar o caminho (Uri) da foto escolhida na galeria
+
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    // Lançador que abre a galeria nativa do Android
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
@@ -84,12 +107,10 @@ fun AnunciarScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Caixa de Upload de Foto com Galeria Real
             Text("Fotos do Item", fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
 
             if (selectedImageUri == null) {
-                // Estado vazio: Botão para abrir galeria
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -109,7 +130,6 @@ fun AnunciarScreen(navController: NavController) {
                     }
                 }
             } else {
-                // Estado preenchido: Mostra a imagem com opção de trocar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -289,26 +309,42 @@ fun AnunciarScreen(navController: NavController) {
 
                     scope.launch {
                         try {
-                            val request = ProductRequest(
-                                title = titulo.trim(),
-                                description = descricao.trim(),
-                                categoryId = backendCategoryId,
-                                condition = backendCondition,
-                                interests = interesse.trim().takeIf { it.isNotBlank() }
-                            )
+                            // Converte textos para RequestBody
+                            val titleBody = titulo.trim().toRequestBody("text/plain".toMediaTypeOrNull())
+                            val descBody = descricao.trim().toRequestBody("text/plain".toMediaTypeOrNull())
+                            val catBody = backendCategoryId.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val condBody = backendCondition.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val intBody = interesse.trim().takeIf { it.isNotBlank() }?.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                            val response = ApiClient.authApi.createProduct("Bearer $token", request)
+                            // Prepara a foto
+                            var photoPart: MultipartBody.Part? = null
+                            selectedImageUri?.let { uri ->
+                                val file = getFileFromUri(context, uri)
+                                if (file != null) {
+                                    val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                                    photoPart = MultipartBody.Part.createFormData("photo", file.name, requestFile)
+                                }
+                            }
+
+                            // Faz a requisição Multipart
+                            val response = ApiClient.authApi.createProduct(
+                                token = "Bearer $token",
+                                title = titleBody,
+                                description = descBody,
+                                categoryId = catBody,
+                                condition = condBody,
+                                interests = intBody,
+                                photo = photoPart
+                            )
 
                             if (response.isSuccessful) {
                                 Toast.makeText(context, "Anúncio publicado com sucesso!", Toast.LENGTH_SHORT).show()
-
                                 titulo = ""
                                 descricao = ""
                                 interesse = ""
                                 categoriaSelecionada = ""
                                 estadoSelecionado = ""
-                                selectedImageUri = null // Limpa a foto
-
+                                selectedImageUri = null
                                 navController.navigate("home") {
                                     popUpTo("home") { inclusive = true }
                                 }

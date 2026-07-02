@@ -1,11 +1,15 @@
 package com.example.trocacampus
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.Response
 
@@ -79,10 +83,17 @@ interface AuthApi {
     @GET("auth/me")
     suspend fun getMe(@Header("Authorization") token: String): Response<User>
 
+    // --- ROTA ATUALIZADA PARA RECEBER A FOTO FÍSICA ---
+    @Multipart
     @POST("products")
     suspend fun createProduct(
         @Header("Authorization") token: String,
-        @Body request: ProductRequest
+        @Part("title") title: RequestBody,
+        @Part("description") description: RequestBody,
+        @Part("categoryId") categoryId: RequestBody,
+        @Part("condition") condition: RequestBody,
+        @Part("interests") interests: RequestBody?,
+        @Part photo: MultipartBody.Part?
     ): Response<ProductResponse>
 
     @GET("products/my")
@@ -102,7 +113,6 @@ interface AuthApi {
 }
 
 object ApiClient {
-    // URL atualizada para o servidor na nuvem (Render)
     private const val BASE_URL = "https://troca-campus.onrender.com/"
 
     private val retrofit = Retrofit.Builder()
