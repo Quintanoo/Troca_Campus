@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.SubcomposeAsyncImage // Import alterado
+import coil.compose.SubcomposeAsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,7 +98,10 @@ fun HomeScreen(navController: NavController) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("TrocaCampus", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
-                Icon(Icons.Default.Notifications, contentDescription = "Notificações")
+                // --- AQUI O SINO VIRA UM BOTÃO CLICÁVEL ---
+                IconButton(onClick = { navController.navigate("notifications") }) {
+                    Icon(Icons.Default.Notifications, contentDescription = "Notificações")
+                }
             }
 
             OutlinedTextField(
@@ -159,7 +162,6 @@ fun ProductCard(produto: ProductResponse, navController: NavController) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row {
-                // --- MUDANÇA DA IMAGEM COM TRATAMENTO DE ERRO ---
                 val imageUrl = produto.photos?.firstOrNull()?.url?.replace("http://", "https://")
 
                 if (!imageUrl.isNullOrEmpty()) {
@@ -191,7 +193,6 @@ fun ProductCard(produto: ProductResponse, navController: NavController) {
                         Icon(Icons.Default.ShoppingCart, contentDescription = "Item", tint = Color.Gray)
                     }
                 }
-                // ------------------------------------
 
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
